@@ -20,17 +20,15 @@ enum State : int8_t {
 };
 
 enum InputX : int8_t {
-  Idle,
   SwitchModeRight,
   SwitchModeLeft, 
   RunTimer,
 };
 
 enum InputY : int8_t {
-  Idle,
   IncreaseTime,
   DecreaseTime,
-}
+};
 
 // Data
 
@@ -189,7 +187,7 @@ void showDisplay() {
 
 // ---------- Actions ----------
 
-// static Time time;
+static Time time;
 // static int8_t time_mode = 0; // 0 - hours; 1 - minutes; 2 - seconds;
 
 
@@ -304,7 +302,7 @@ void loop() {
   if (millis() - millies_last > 100) {
     millies_last = millis();
 
-    showDisplay(time);
+    showDisplay();
   }
 
   // updateStateMachine();
