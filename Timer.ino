@@ -47,11 +47,16 @@ void setDisplay(Time &time) {
   snprintf(time_string, sizeof(time_string), "%02d:%02d:%02d", time.h, time.m, time.s);
 }
 
+// void showDisplay() {
+//   lcd.clear();
+//   lcd.setCursor(0, 0);
+//   lcd.print(time_string);
+//   lcd.noCursor();
+// }
+
 void showDisplay() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(time_string);
-  lcd.noCursor();
+  Serial.print(time_string);
+  Serial.println(" ");
 }
 
 // ---------- Input ----------
