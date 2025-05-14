@@ -20,17 +20,22 @@ enum State : int8_t {
 };
 
 enum InputX : int8_t {
+  IdleX,
   SwitchModeRight,
   SwitchModeLeft, 
   RunTimer,
 };
 
 enum InputY : int8_t {
+  IdleY,
   IncreaseTime,
   DecreaseTime,
 };
 
 // Data
+
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+const int16_t buzzer = 6;
 
 State state;
 InputX inputX;
@@ -45,67 +50,83 @@ void setDisplay(Time &time) {
   snprintf(time_string, sizeof(time_string), "%02d:%02d:%02d", time.h, time.m, time.s);
 }
 
-// void showDisplay() {
-//   lcd.clear();
-//   lcd.setCursor(0, 0);
-//   lcd.print(time_string);
-//   lcd.noCursor();
-// }
-
 void showDisplay() {
-  Serial.print(time_string);
-  Serial.println(" ");
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(time_string);
+  lcd.noCursor();
 }
+
+// void showDisplay() {
+//   Serial.print(time_string);
+//   Serial.println(" ");
+// }
 
 // ---------- Input ----------
 
-// static bool isChangedX = false;
-// static bool isChangedY = false;
+static bool isChangedX = false;
+static bool isChangedY = false;
 
-// void readInput(int16_t adcX, int16_t adcY) {
-//   static int16_t adcX_last = adcX;
-//   static int16_t adcY_last = adcY;
+int16_t adcX = 0; 
+int16_t adcY = 0;
 
-//   if (adcX > adcX_last + 50 || adcX < adcX_last - 50) {
-//     isChangedX = true;
-//   }
+void readInput() {
+  static int16_t adcX_last = adcX;
+  static int16_t adcY_last = adcY;
 
-//   if (adcY > adcY_last + 50 || adcY < adcY_last - 50) {
-//     isChangedY = true;
-//   }
-// }
+  if (adcX > adcX_last + 50 || adcX < adcX_last - 50) {
+    isChangedX = true;
+  }
 
-// void func() {
-//   const int16_t center = 510;
-//   const int16_t threshold = 150;
+  if (adcY > adcY_last + 50 || adcY < adcY_last - 50) {
+    isChangedY = true;
+  }
+}
 
-//   int16_t deltaX = abs(adcX - center);
-//   int16_t deltaY = abs(adcY - center);
+void registerEvent() {
+  const int16_t center = 510;
+  const int16_t threshold = 150;
 
-//    if (deltaX < threshold && deltaY < threshold) {
-//     inputX = InputX::Idle;
-//     inputY = InputY::Idle;
-//     return;
-//   }
+  int16_t deltaX = abs(adcX - center);
+  int16_t deltaY = abs(adcY - center);
 
-//   if (isChangedX) {
-//     if (adcX > center + threshold) {
-//       input = Input::SwitchModeRight;
+  //  if (deltaX < threshold && deltaY < threshold) {
+  //   inputX = InputX::Idle;
+  //   inputY = InputY::Idle;
+  //   return;
+  // }
 
-//     } else if (adcX < center - threshold) {
-//       input = Input::SwitchModeLeft;
-//     }
-//   }
+  if (isChangedX) {
+    if (adcX > center + threshold) {
+      inputX = InputX::SwitchModeRight;
 
-//   if (isChangedY) {
-//     if (adcY > center + threshold) {
-//       input = Input::IncreaseTime;
+    } else if (adcX < center - threshold) {
+      inputX = InputX::SwitchModeLeft;
+
+    } else {
+      inputX = InputX::IdleX;
+    }
+  }
+
+  if (isChangedY) {
+    if (adcY > center + threshold) {
+      inputY = InputY::IncreaseTime;
     
-//     } else if (adcY < center - threshold) {
-//       input = Input::DecreaseTime;
-//     }
-//   }
-// }
+    } else if (adcY < center - threshold) {
+      inputY = InputY::DecreaseTime;
+
+    } else {
+      inputY = InputY::IdleY;
+    }
+  }
+
+  Serial.print("inputX: ");
+  Serial.print(inputX);
+  Serial.print("; ");
+  Serial.print("inputY: ");
+  Serial.print(inputY);
+  Serial.println(" ");
+}
 
 // void startTimer() {
 //   static int8_t left_input_delay = 0;
@@ -260,9 +281,6 @@ static Time time;
 
 static int16_t millies_last = 0;
 
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
-const int16_t buzzer = 6;
-
 void setup() {
   Serial.begin( 9600 );
   pinMode( buzzer, OUTPUT );
@@ -281,23 +299,14 @@ void setup() {
 void loop() {
   digitalWrite( buzzer, LOW );
 
-  // int16_t adcX = analogRead( A0 );
-  // int16_t adcY = analogRead( A1 );
+  adcX = analogRead( A0 );
+  adcY = analogRead( A1 );
 
-  // readInput(adcX, adcY);
-  int8_t h;
-  int8_t m;
-  int8_t s;
+  readInput();
+  registerEvent();
 
-  if (Serial.available()) {
-    h = Serial.parseInt();
-    m = Serial.parseInt();
-    s = Serial.parseInt();
+  setDisplay(time);
 
-    time = {h,m,s};
-
-    setDisplay(time);
-  }
 
   if (millis() - millies_last > 100) {
     millies_last = millis();
