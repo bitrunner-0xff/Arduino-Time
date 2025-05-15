@@ -30,16 +30,17 @@ enum InputY : int8_t {
 };
 
 enum Mode : int8_t {
+  Menu,
   Clock,
   Timer,
   Stopwatch,
-  Settings,
 };
 
 State state;
+Mode mode;
+
 InputX inputX;
 InputY inputY;
-Mode mode;
 
 // ----- Pins -----
 
@@ -47,35 +48,12 @@ const int16_t buzzer = 6;
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 
-// ========== DISPLAY =========================================================
-
-static char time_string[9] = "00:00:00\0";
-
-void setDisplay(Time &time) {
-  snprintf(time_string, sizeof(time_string), "%02d:%02d:%02d", time.h, time.m, time.s);
-}
-
-void showDisplay() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(time_string);
-  lcd.noCursor();
-}
-
-// void showDisplay() {
-//   Serial.print(time_string);
-//   Serial.println(" ");
-// }
-
 // ========== Input ===========================================================
 
 static bool isChangedX = false;
 static bool isChangedY = false;
 
-int16_t adcX = 0; 
-int16_t adcY = 0;
-
-void readInput() {
+void readInput(int16_t adcX, int16_t adcY) {
   static int16_t adcX_last = adcX;
   static int16_t adcY_last = adcY;
 
@@ -88,12 +66,9 @@ void readInput() {
   }
 }
 
-void registerEvent() {
+void registerEvent(int16_t adcX, int16_t adcY) {
   const int16_t center = 510;
   const int16_t threshold = 150;
-
-  int16_t deltaX = abs(adcX - center);
-  int16_t deltaY = abs(adcY - center);
 
   if (isChangedX) {
     if (adcX > center + threshold) {
@@ -118,13 +93,6 @@ void registerEvent() {
       inputY = InputY::IdleY;
     }
   }
-
-  Serial.print("inputX: ");
-  Serial.print(inputX);
-  Serial.print("; ");
-  Serial.print("inputY: ");
-  Serial.print(inputY);
-  Serial.println(" ");
 }
 
 
@@ -133,14 +101,19 @@ void registerEvent() {
 // ---------- Timer -----------------------------------------------------------
 
 static Time time;
+static char time_string[9] = "00:00:00\0";
 static int8_t timer_section = 0; // 0 - hours; 1 - minutes; 2 - seconds;
 static bool isRunningTimer = false;
 
-void startTimer() {
-  static int8_t left_input_delay = 0;
+void setTime(Time &time) {
+  snprintf(time_string, sizeof(time_string), "%02d:%02d:%02d", time.h, time.m, time.s);
+}
 
-  if (inputX == InputX::SwitchModeRight && millis() - left_input_delay >= 3000) {
-    left_input_delay = millis();
+void startTimer() {
+  static int8_t start_timer_last = 0;
+
+  if (inputX == InputX::SwitchModeRight && millis() - start_timer_last >= 3000) {
+    start_timer_last = millis();
 
     isRunningTimer = true;
   }
@@ -189,10 +162,7 @@ void runTimer( Time& time, termination_handler handler ) {
     } else {
       handler();
       isRunningTimer = false;
-      delay(3000);
     }
-
-    delay(1000);
   }
 }
 
@@ -211,10 +181,50 @@ void runBuzzer() {
 // TODO;
 
 
-// ---------- State machine ----------
+// ========== DISPLAY =========================================================
 
-// static bool isRunning;
 
+void display() {
+  static int16_t delay_last = 0;
+
+  switch (mode) {
+    case Mode::Menu : 
+      if (millis() - delay_last > 100) {
+        showMenu();
+      };
+      break;
+
+    // case Mode::Timer : 
+    // case Mode::Clock : 
+    // case Mode::Stopwatch : 
+  }
+}
+
+void showMenu() {
+  switch (mode) {
+    case Mode::Clock : showLcdOption("Clock"); break;
+    case Mode::Timer : showLcdOption("Timer"); break;
+    case Mode::Stopwatch : showLcdOption("Stopwatch"); break;
+  }
+}
+
+void showDisplay(char *word) {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(word);
+  lcd.noCursor();
+}
+
+static void showLcdOption(char *opt) {
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.println("Menu");
+  lcd.setCursor(0,1);
+  lcd.println(*opt);
+}
+
+
+// ========== Control =========================================================
 
 // void updateStateMachine() {
 //   switch (state) {
@@ -296,24 +306,19 @@ void setup() {
   state = State::Center;
   inputX = InputX::IdleX;
   inputY = InputY::IdleY;
-  mode = Mode::Settings;
+  mode = Mode::Menu;
 }
 
 void loop() {
   digitalWrite( buzzer, LOW );
 
-  adcX = analogRead( A0 );
-  adcY = analogRead( A1 );
+  int16_t adcX = analogRead( A0 );
+  int16_t adcY = analogRead( A1 );
 
-  readInput();
-  registerEvent();
+  readInput(adcX, adcY);
+  registerEvent(adcX, adcY);
 
-  setDisplay(time);
+  // control();
 
-
-  if (millis() - millies_last > 100) {
-    millies_last = millis();
-
-    showDisplay();
-  }
+  display();
 }
