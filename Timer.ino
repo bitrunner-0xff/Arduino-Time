@@ -1,7 +1,6 @@
 // include the library code:
 #include <LiquidCrystal.h>
 
-// Declarations
 typedef void (*termination_handler)();
 
 typedef struct {
@@ -16,14 +15,12 @@ enum State : int8_t {
   Bottom,
   Left,
   Right,
-  Running,
 };
 
 enum InputX : int8_t {
   IdleX,
   SwitchModeRight,
   SwitchModeLeft, 
-  RunTimer,
 };
 
 enum InputY : int8_t {
@@ -32,17 +29,25 @@ enum InputY : int8_t {
   DecreaseTime,
 };
 
-// Data
-
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
-const int16_t buzzer = 6;
+enum Mode : int8_t {
+  Clock,
+  Timer,
+  Stopwatch,
+  Settings,
+};
 
 State state;
 InputX inputX;
 InputY inputY;
+Mode mode;
+
+// ----- Pins -----
+
+const int16_t buzzer = 6;
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 
-// ---------- Display ----------
+// ========== DISPLAY =========================================================
 
 static char time_string[9] = "00:00:00\0";
 
@@ -62,7 +67,7 @@ void showDisplay() {
 //   Serial.println(" ");
 // }
 
-// ---------- Input ----------
+// ========== Input ===========================================================
 
 static bool isChangedX = false;
 static bool isChangedY = false;
@@ -89,12 +94,6 @@ void registerEvent() {
 
   int16_t deltaX = abs(adcX - center);
   int16_t deltaY = abs(adcY - center);
-
-  //  if (deltaX < threshold && deltaY < threshold) {
-  //   inputX = InputX::Idle;
-  //   inputY = InputY::Idle;
-  //   return;
-  // }
 
   if (isChangedX) {
     if (adcX > center + threshold) {
@@ -128,15 +127,88 @@ void registerEvent() {
   Serial.println(" ");
 }
 
-// void startTimer() {
-//   static int8_t left_input_delay = 0;
 
-//   if (millis() - left_input_delay >= 3000) {
-//     left_input_delay = millis();
+// ========== MODES ===========================================================
 
-//     input = Input::RunTimer;
-//   }
-// }
+// ---------- Timer -----------------------------------------------------------
+
+static Time time;
+static int8_t timer_section = 0; // 0 - hours; 1 - minutes; 2 - seconds;
+static bool isRunningTimer = false;
+
+void startTimer() {
+  static int8_t left_input_delay = 0;
+
+  if (inputX == InputX::SwitchModeRight && millis() - left_input_delay >= 3000) {
+    left_input_delay = millis();
+
+    isRunningTimer = true;
+  }
+}
+
+void switchModeRight() {
+  ++timer_section;
+  if (timer_section > 2) timer_section = 0;
+}
+
+void switchModeLeft() {
+  --timer_section;
+  if (timer_section < 0) timer_section = 2;
+}
+
+void increaseTime() {
+  switch (timer_section) {
+    case 0: time.h = time.h > 99 ? time.h = 0 : time.h += 1; break;
+    case 1: time.m = time.m > 59 ? time.m = 0 : time.m += 1; break;
+    case 2: time.s = time.s > 59 ? time.s = 0 : time.s += 1; break;
+  }
+}
+
+void decreaseTime() {
+  switch (timer_section) {
+    case 0: time.h = time.h < 0 ? time.h = 99 : time.h -= 1; break;
+    case 1: time.m = time.m < 0 ? time.m = 59 : time.m -= 1; break;
+    case 2: time.s = time.s < 0 ? time.s = 59 : time.s -= 1; break;
+  }
+}
+
+void runTimer( Time& time, termination_handler handler ) {
+  while (isRunningTimer) {
+
+    if( time.s > 0 ) {
+      time.s--;
+
+    } else if( time.m > 0 ) {
+      time.m--;
+      time.s = 59;
+
+    } else if( time.h > 0 ) {
+      time.h--;
+      time.m = 59;
+
+    } else {
+      handler();
+      isRunningTimer = false;
+      delay(3000);
+    }
+
+    delay(1000);
+  }
+}
+
+void runBuzzer() {
+  digitalWrite(buzzer, HIGH);
+  delay(1000);
+  digitalWrite(buzzer, LOW);
+}
+
+// ---------- Clock -----------------------------------------------------------
+
+// TODO;
+
+// ---------- Stopwatch -------------------------------------------------------
+
+// TODO;
 
 
 // ---------- State machine ----------
@@ -206,78 +278,8 @@ void registerEvent() {
 //   }
 // }
 
-// ---------- Actions ----------
 
-static Time time;
-// static int8_t time_mode = 0; // 0 - hours; 1 - minutes; 2 - seconds;
-
-
-// void switchModeRight() {
-//   ++time_mode;
-//   if (time_mode > 2) time_mode = 0;
-// }
-
-// void switchModeLeft() {
-//   --time_mode;
-//   if (time_mode < 0) time_mode = 2;
-// }
-
-// void increaseTime() {
-//   switch (time_mode) {
-//     case 0: time.h = time.h > 99 ? time.h = 0 : time.h += 1; break;
-//     case 1: time.m = time.m > 59 ? time.m = 0 : time.m += 1; break;
-//     case 2: time.s = time.s > 59 ? time.s = 0 : time.s += 1; break;
-//   }
-
-//   display();
-// }
-
-// void decreaseTime() {
-//   switch (time_mode) {
-//     case 0: time.h = time.h < 0 ? time.h = 99 : time.h -= 1; break;
-//     case 1: time.m = time.m < 0 ? time.m = 59 : time.m -= 1; break;
-//     case 2: time.s = time.s < 0 ? time.s = 59 : time.s -= 1; break;
-//   }
-
-//   display();
-// }
-
-// void runTimer( Time& time, termination_handler handler ) {
-//   while (isRunning) {
-
-//     if( time.s > 0 ) {
-//       time.s--;
-
-//     } else if( time.m > 0 ) {
-//       time.m--;
-//       time.s = 59;
-
-//     } else if( time.h > 0 ) {
-//       time.h--;
-//       time.m = 59;
-
-//     } else {
-//       handler();
-//       isRunning = false;
-//       delay(3000);
-//     }
-
-//     display();
-//     delay(1000);
-//   }
-// }
-
-
-// ---------- Functions ----------
-
-// void runBuzzer() {
-//   digitalWrite(buzzer, HIGH);
-//   delay(1000);
-//   digitalWrite(buzzer, LOW);
-// }
-
-
-// ---------- Program ----------
+// ========== PROGRAM =========================================================
 
 static int16_t millies_last = 0;
 
@@ -291,9 +293,10 @@ void setup() {
   lcd.noAutoscroll();
   
   time = { 0,0,0 };
-  // state = State::Center;
-  // input = Input::Idle;
-  // isRunning = false;
+  state = State::Center;
+  inputX = InputX::IdleX;
+  inputY = InputY::IdleY;
+  mode = Mode::Settings;
 }
 
 void loop() {
@@ -313,6 +316,4 @@ void loop() {
 
     showDisplay();
   }
-
-  // updateStateMachine();
 }
