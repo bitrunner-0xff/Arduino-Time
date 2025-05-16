@@ -17,6 +17,18 @@ enum State : int8_t {
   Right,
 };
 
+int8_t mode = 0; // 0 - Menu; 1 - Clock; 2 - Timer; 3 - Stopwatch;
+
+State state;
+
+// ----- Pins -----
+
+const int16_t buzzer = 6;
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
+
+// ========== Input ===========================================================
+
 enum InputX : int8_t {
   IdleX,
   SwitchModeRight,
@@ -29,25 +41,11 @@ enum InputY : int8_t {
   DecreaseTime,
 };
 
-
-int8_t mode = 0; // 0 - Menu; 1 - Clock; 2 - Timer; 3 - Stopwatch;
-
-
-State state;
-
 InputX inputX;
 InputY inputY;
 
-// ----- Pins -----
-
-const int16_t buzzer = 6;
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
-
-
-// ========== Input ===========================================================
-
 void readInput(int16_t adcX, int16_t adcY) {
-  static const int16_t threshold = 100;
+  const int16_t threshold = 100;
 
   static int16_t adcX_last = adcX;
   static int16_t adcY_last = adcY;
@@ -72,14 +70,6 @@ void readInput(int16_t adcX, int16_t adcY) {
   } else {
     inputY = InputY::IdleY;
   }
-  
-
-  Serial.print("inputX: ");
-  Serial.print(inputX);
-  Serial.print(" ");
-  Serial.print("inputY ");
-  Serial.print(inputY);
-  Serial.println(" ");
 }
 
 
