@@ -9,18 +9,6 @@ typedef struct {
   int8_t s;
 } Timer;
 
-enum State : int8_t {
-  Center,
-  Top,
-  Bottom,
-  Left,
-  Right,
-};
-
-int8_t mode = 0; // 0 - Menu; 1 - Clock; 2 - Timer; 3 - Stopwatch;
-
-State state;
-
 // ----- Pins -----
 
 const int16_t buzzer = 6;
@@ -158,52 +146,24 @@ void runBuzzer() {
 // TODO;
 
 
-// ========== DISPLAY =========================================================
-
-
-void display() {
-  switch (mode) {
-    case 0 : 
-      showMenu(0);
-      break;
-
-    // case Mode::Timer : 
-    // case Mode::Clock : 
-    // case Mode::Stopwatch : 
-  }
-}
-
-void updateDisplay(const char *row1 = nullptr, const char *row2 = nullptr) {
-  lcd.clear();
-
-  if (row1) {  
-    lcd.setCursor(0, 0);
-    lcd.print(row1);
-  }
-
-  if (!row1 && row2) {
-    lcd.setCursor(0, 0);
-    lcd.print(row2);
-
-  } else if (row2) {
-    lcd.setCursor(0, 1);
-    lcd.print(row2);
-  }
-}
-
-void showMenu(int8_t menu_mode) {
-  switch (menu_mode) {
-    case 1 : updateDisplay("Menu", "Clock"); break;
-    case 2 : updateDisplay("Menu", "Timer"); break;
-    case 3 : updateDisplay("Menu", "Stopwatch"); break;
-    default: updateDisplay("Menu", "Up Down"); break;
-  }
-}
-
-
-
 
 // ========== Control =========================================================
+
+enum State : int8_t {
+  Center,
+  Top,
+  Bottom,
+  Left,
+  Right,
+};
+
+int8_t mode = 0; // 0 - Clock; 1 - Timer; 2 - Stopwatch;
+
+State state;
+
+void control() {
+
+}
 
 // void updateStateMachine() {
 //   switch (state) {
@@ -268,6 +228,52 @@ void showMenu(int8_t menu_mode) {
 // }
 
 
+// ========== DISPLAY =========================================================
+
+
+void display() {
+  switch (mode) {
+    case 0 : 
+      showMenu(0);
+      break;
+
+    // case Mode::Timer : 
+    // case Mode::Clock : 
+    // case Mode::Stopwatch : 
+  }
+}
+
+void updateDisplay(const char *row1 = nullptr, const char *row2 = nullptr) {
+  lcd.clear();
+
+  if (row1) {  
+    lcd.setCursor(0, 0);
+    lcd.print(row1);
+  }
+
+  if (!row1 && row2) {
+    lcd.setCursor(0, 0);
+    lcd.print(row2);
+
+  } else if (row2) {
+    lcd.setCursor(0, 1);
+    lcd.print(row2);
+  }
+}
+
+void showMenu(int8_t menu_mode) {
+  switch (menu_mode) {
+    case 1 : updateDisplay("Menu", "Clock"); break;
+    case 2 : updateDisplay("Menu", "Timer"); break;
+    case 3 : updateDisplay("Menu", "Stopwatch"); break;
+    default: updateDisplay("Menu", "Up Down"); break;
+  }
+}
+
+
+
+
+
 // ========== PROGRAM =========================================================
 
 static int16_t millies_last = 0;
@@ -297,6 +303,7 @@ void loop() {
   readInput(adcX, adcY);
 
   // control();
+
   if ((curMillis - delay_last) >= 100) {
     display();
 
