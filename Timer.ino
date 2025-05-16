@@ -7,7 +7,7 @@ typedef struct {
   int8_t h;
   int8_t m;
   int8_t s;
-} Time;
+} Timer;
 
 enum State : int8_t {
   Center,
@@ -46,49 +46,40 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 // ========== Input ===========================================================
 
-static bool isChangedX = false;
-static bool isChangedY = false;
-
 void readInput(int16_t adcX, int16_t adcY) {
+  static const int16_t threshold = 100;
+
   static int16_t adcX_last = adcX;
   static int16_t adcY_last = adcY;
 
-  if (adcX > adcX_last + 50 || adcX < adcX_last - 50) {
-    isChangedX = true;
+  if (adcX > adcX_last + threshold) {
+    inputX = InputX::SwitchModeRight;
+
+  } else if (adcX < adcX_last - threshold) {
+    inputX = InputX::SwitchModeLeft;
+
+  } else {
+    inputX = InputX::IdleX;
   }
 
-  if (adcY > adcY_last + 50 || adcY < adcY_last - 50) {
-    isChangedY = true;
+
+  if (adcY > adcY_last + threshold) {
+    inputY = InputY::IncreaseTime;
+  
+  } else if (adcY < adcY_last - threshold) {
+    inputY = InputY::DecreaseTime;
+
+  } else {
+    inputY = InputY::IdleY;
   }
-}
+  
 
-void registerEvent(int16_t adcX, int16_t adcY) {
-  const int16_t center = 510;
-  const int16_t threshold = 150;
-
-  if (isChangedX) {
-    if (adcX > center + threshold) {
-      inputX = InputX::SwitchModeRight;
-
-    } else if (adcX < center - threshold) {
-      inputX = InputX::SwitchModeLeft;
-
-    } else {
-      inputX = InputX::IdleX;
-    }
-  }
-
-  if (isChangedY) {
-    if (adcY > center + threshold) {
-      inputY = InputY::IncreaseTime;
-    
-    } else if (adcY < center - threshold) {
-      inputY = InputY::DecreaseTime;
-
-    } else {
-      inputY = InputY::IdleY;
-    }
-  }
+  Serial.print("inputX: ");
+  Serial.print(inputX);
+  Serial.print(" ");
+  Serial.print("inputY ");
+  Serial.print(inputY);
+  Serial.println(" ");
 }
 
 
@@ -96,13 +87,13 @@ void registerEvent(int16_t adcX, int16_t adcY) {
 
 // ---------- Timer -----------------------------------------------------------
 
-static Timer time;
+static Timer timer;
 static char timer_string[9] = "00:00:00\0";
 static int8_t timer_section = 0; // 0 - hours; 1 - minutes; 2 - seconds;
 static bool isRunningTimer = false;
 
-void setTime(Timer &timer) {
-  snprintf(timer_string, sizeof(time_string), "%02d:%02d:%02d", timer.h, timer.m, timer.s);
+void setTimer() {
+  snprintf(timer_string, sizeof(timer_string), "%02d:%02d:%02d", timer.h, timer.m, timer.s);
 }
 
 void startTimer() {
@@ -301,7 +292,7 @@ void setup() {
   lcd.noCursor();
   lcd.noAutoscroll();
   
-  time = { 0,0,0 };
+  timer = { 0,0,0 };
   state = State::Center;
   inputX = InputX::IdleX;
   inputY = InputY::IdleY;
@@ -310,11 +301,10 @@ void setup() {
 void loop() {
   int64_t curMillis = millis();
 
-  // int16_t adcX = analogRead( A0 );
-  // int16_t adcY = analogRead( A1 );
+  int16_t adcX = analogRead( A0 );
+  int16_t adcY = analogRead( A1 );
 
-  // readInput(adcX, adcY);
-  // registerEvent(adcX, adcY);
+  readInput(adcX, adcY);
 
   // control();
   if ((curMillis - delay_last) >= 100) {
