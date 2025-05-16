@@ -29,15 +29,11 @@ enum InputY : int8_t {
   DecreaseTime,
 };
 
-enum Mode : int8_t {
-  Menu,
-  Clock,
-  Timer,
-  Stopwatch,
-};
+
+int8_t mode = 0; // 0 - Menu; 1 - Clock; 2 - Timer; 3 - Stopwatch;
+
 
 State state;
-Mode mode;
 
 InputX inputX;
 InputY inputY;
@@ -185,13 +181,9 @@ void runBuzzer() {
 
 
 void display() {
-  static int16_t delay_last = 0;
-
   switch (mode) {
-    case Mode::Menu : 
-      if (millis() - delay_last > 100) {
-        showMenu();
-      };
+    case 0 : 
+      showMenu(0);
       break;
 
     // case Mode::Timer : 
@@ -200,28 +192,34 @@ void display() {
   }
 }
 
-void showMenu() {
-  switch (mode) {
-    case Mode::Clock : showLcdOption("Clock"); break;
-    case Mode::Timer : showLcdOption("Timer"); break;
-    case Mode::Stopwatch : showLcdOption("Stopwatch"); break;
+void updateDisplay(const char *row1 = nullptr, const char *row2 = nullptr) {
+  lcd.clear();
+
+  if (row1) {  
+    lcd.setCursor(0, 0);
+    lcd.print(row1);
+  }
+
+  if (!row1 && row2) {
+    lcd.setCursor(0, 0);
+    lcd.print(row2);
+
+  } else if (row2) {
+    lcd.setCursor(0, 1);
+    lcd.print(row2);
   }
 }
 
-void showDisplay(char *word) {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(word);
-  lcd.noCursor();
+void showMenu(int8_t menu_mode) {
+  switch (menu_mode) {
+    case 1 : updateDisplay("Menu", "Clock"); break;
+    case 2 : updateDisplay("Menu", "Timer"); break;
+    case 3 : updateDisplay("Menu", "Stopwatch"); break;
+    default: updateDisplay("Menu", "Up Down"); break;
+  }
 }
 
-static void showLcdOption(char *opt) {
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.println("Menu");
-  lcd.setCursor(0,1);
-  lcd.println(*opt);
-}
+
 
 
 // ========== Control =========================================================
@@ -292,13 +290,14 @@ static void showLcdOption(char *opt) {
 // ========== PROGRAM =========================================================
 
 static int16_t millies_last = 0;
+static int64_t delay_last = 0;
 
 void setup() {
   Serial.begin( 9600 );
   pinMode( buzzer, OUTPUT );
 
-  lcd.begin( 16, 1 );
-  lcd.setCursor( 0, 0 );
+  lcd.begin( 16, 2 );
+  // lcd.setCursor( 0, 0 );
   lcd.noCursor();
   lcd.noAutoscroll();
   
@@ -306,19 +305,22 @@ void setup() {
   state = State::Center;
   inputX = InputX::IdleX;
   inputY = InputY::IdleY;
-  mode = Mode::Menu;
 }
 
 void loop() {
-  digitalWrite( buzzer, LOW );
+  int64_t curMillis = millis();
 
-  int16_t adcX = analogRead( A0 );
-  int16_t adcY = analogRead( A1 );
+  // int16_t adcX = analogRead( A0 );
+  // int16_t adcY = analogRead( A1 );
 
-  readInput(adcX, adcY);
-  registerEvent(adcX, adcY);
+  // readInput(adcX, adcY);
+  // registerEvent(adcX, adcY);
 
   // control();
+  if ((curMillis - delay_last) >= 100) {
+    display();
 
-  display();
+
+    delay_last = millis();
+  }
 }
