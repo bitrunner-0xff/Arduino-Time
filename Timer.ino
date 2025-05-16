@@ -96,13 +96,13 @@ void registerEvent(int16_t adcX, int16_t adcY) {
 
 // ---------- Timer -----------------------------------------------------------
 
-static Time time;
-static char time_string[9] = "00:00:00\0";
+static Timer time;
+static char timer_string[9] = "00:00:00\0";
 static int8_t timer_section = 0; // 0 - hours; 1 - minutes; 2 - seconds;
 static bool isRunningTimer = false;
 
-void setTime(Time &time) {
-  snprintf(time_string, sizeof(time_string), "%02d:%02d:%02d", time.h, time.m, time.s);
+void setTime(Timer &timer) {
+  snprintf(timer_string, sizeof(time_string), "%02d:%02d:%02d", timer.h, timer.m, timer.s);
 }
 
 void startTimer() {
@@ -127,33 +127,33 @@ void switchModeLeft() {
 
 void increaseTime() {
   switch (timer_section) {
-    case 0: time.h = time.h > 99 ? time.h = 0 : time.h += 1; break;
-    case 1: time.m = time.m > 59 ? time.m = 0 : time.m += 1; break;
-    case 2: time.s = time.s > 59 ? time.s = 0 : time.s += 1; break;
+    case 0: timer.h = timer.h > 99 ? timer.h = 0 : timer.h += 1; break;
+    case 1: timer.m = timer.m > 59 ? timer.m = 0 : timer.m += 1; break;
+    case 2: timer.s = timer.s > 59 ? timer.s = 0 : timer.s += 1; break;
   }
 }
 
 void decreaseTime() {
   switch (timer_section) {
-    case 0: time.h = time.h < 0 ? time.h = 99 : time.h -= 1; break;
-    case 1: time.m = time.m < 0 ? time.m = 59 : time.m -= 1; break;
-    case 2: time.s = time.s < 0 ? time.s = 59 : time.s -= 1; break;
+    case 0: timer.h = timer.h < 0 ? timer.h = 99 : timer.h -= 1; break;
+    case 1: timer.m = timer.m < 0 ? timer.m = 59 : timer.m -= 1; break;
+    case 2: timer.s = timer.s < 0 ? timer.s = 59 : timer.s -= 1; break;
   }
 }
 
-void runTimer( Time& time, termination_handler handler ) {
+void runTimer(termination_handler handler ) {
   while (isRunningTimer) {
 
-    if( time.s > 0 ) {
-      time.s--;
+    if( timer.s > 0 ) {
+      timer.s--;
 
-    } else if( time.m > 0 ) {
-      time.m--;
-      time.s = 59;
+    } else if( timer.m > 0 ) {
+      timer.m--;
+      timer.s = 59;
 
-    } else if( time.h > 0 ) {
-      time.h--;
-      time.m = 59;
+    } else if( timer.h > 0 ) {
+      timer.h--;
+      timer.m = 59;
 
     } else {
       handler();
