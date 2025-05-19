@@ -31,10 +31,10 @@ void readInput(int16_t adcX, int16_t adcY) {
   static int16_t adcY_last = adcY;
 
   if (adcX > adcX_last + threshold) {
-    inputX = InputX::SwitchModeRight;
+    inputX = InputX::Right;
 
   } else if (adcX < adcX_last - threshold) {
-    inputX = InputX::SwitchModeLeft;
+    inputX = InputX::Left;
 
   } else {
     inputX = InputX::IdleX;
@@ -42,10 +42,10 @@ void readInput(int16_t adcX, int16_t adcY) {
 
 
   if (adcY > adcY_last + threshold) {
-    inputY = InputY::IncreaseTime;
+    inputY = InputY::Up;
   
   } else if (adcY < adcY_last - threshold) {
-    inputY = InputY::DecreaseTime;
+    inputY = InputY::Down;
 
   } else {
     inputY = InputY::IdleY;
