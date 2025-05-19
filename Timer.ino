@@ -40,7 +40,6 @@ void readInput(int16_t adcX, int16_t adcY) {
     inputX = InputX::IdleX;
   }
 
-
   if (adcY > adcY_last + threshold) {
     inputY = InputY::Up;
   
@@ -148,14 +147,6 @@ void runBuzzer() {
 
 // ========== Control =========================================================
 
-enum State : int8_t {
-  Center,
-  Top,
-  Bottom,
-  Left,
-  Right,
-};
-
 enum Mode : int8_t {
   Clock,
   Timer,
@@ -164,113 +155,113 @@ enum Mode : int8_t {
 
 Mode mode;
 
-Mode getMode() {
+static int32_t prew_millis = 0;
+
+int8_t getMode() {
   return mode;
 }
 
-void modeSwtch(int64_t millis_val) {
-  static int64_t prev_millis = 0;
+void modeSwtch(int32_t millis_val) {
+  bool isDelayExceed = millis_val - prew_millis >= 2000;
 
-  const int64_t trigger_delay = 2000;
+  if (inputY == InputY::Down && isDelayExceed) {
+    switch (mode) {
+      case Clock: 
+        mode = Timer;
+        break;
 
-  if (millis_val - prev_millis >= trigger_delay) {
-    if (inputY == InputY::Down) {
-      switch (mode) {
-        case Clock: 
-          mode = Timer;
-          break;
+      case Timer: 
+        mode = Stopwatch;
+        break;
 
-        case Timer: 
-          mode = Stopwatch;
-          break;
-
-        case Stopwatch:
-          mode = Clock;
-          break;
-      }
+      case Stopwatch:
+        mode = Clock;
+        break;
     }
 
-    if (inputY == InputY::Up) {
-      switch (mode) {
-        case Clock: 
-          mode = Stopwatch;
-          break;
+    prew_millis = millis();
+  }
 
-        case Timer: 
-          mode = Clock;
-          break;
+  if (inputY == InputY::Up && isDelayExceed) {
+    switch (mode) {
+      case Clock: 
+        mode = Stopwatch;
+        break;
 
-        case Stopwatch:
-          mode = Timer;
-          break;
-      }
+      case Timer: 
+        mode = Clock;
+        break;
+
+      case Stopwatch:
+        mode = Timer;
+        break;
     }
-  }
 
-  prev_millis = millis();
-}
-
-void updateStateMachine() {
-  switch (state) {
-    case State::Center : 
-      switch (input) {
-        case Input::IncreaseTime: 
-          state = State::Top; 
-          increaseTime(); 
-          break;
-
-        case Input::DecreaseTime: 
-          state = State::Bottom; 
-          decreaseTime(); 
-          break;
-
-        case Input::SwitchModeRight: 
-          state = State::Right; 
-          switchModeRight(); 
-          break;
-
-        case Input::SwitchModeLeft: 
-          state = State::Left; 
-          switchModeLeft(); 
-          break;
-      } 
-      return;
-
-    case State::Bottom : 
-      if (input == Input::Idle) {
-        state = State::Center;
-      } 
-      return;
-
-    case State::Top : 
-      if (input == Input::Idle) {
-        state = State::Center;
-      } 
-      return;
-
-    case State::Left : 
-      if (input == Input::Idle) {
-        state = State::Center;
-      } else if (input == Input::RunTimer) {
-        state = State::Running;
-        isRunning = true;
-        runTimer(time, runBuzzer);
-      }
-      return;
-
-    case State::Right : 
-      if (input == Input::Idle) {
-        state = State::Center;
-      } 
-      return;
-
-    case State::Running : 
-      if (input == Input::Idle) {
-        state = State::Center;
-      } 
-      return;
+    prew_millis = millis();
   }
 }
+
+// void updateStateMachine() {
+//   switch (state) {
+//     case State::Center : 
+//       switch (input) {
+//         case Input::IncreaseTime: 
+//           state = State::Top; 
+//           increaseTime(); 
+//           break;
+
+//         case Input::DecreaseTime: 
+//           state = State::Bottom; 
+//           decreaseTime(); 
+//           break;
+
+//         case Input::SwitchModeRight: 
+//           state = State::Right; 
+//           switchModeRight(); 
+//           break;
+
+//         case Input::SwitchModeLeft: 
+//           state = State::Left; 
+//           switchModeLeft(); 
+//           break;
+//       } 
+//       return;
+
+//     case State::Bottom : 
+//       if (input == Input::Idle) {
+//         state = State::Center;
+//       } 
+//       return;
+
+//     case State::Top : 
+//       if (input == Input::Idle) {
+//         state = State::Center;
+//       } 
+//       return;
+
+//     case State::Left : 
+//       if (input == Input::Idle) {
+//         state = State::Center;
+//       } else if (input == Input::RunTimer) {
+//         state = State::Running;
+//         isRunning = true;
+//         runTimer(time, runBuzzer);
+//       }
+//       return;
+
+//     case State::Right : 
+//       if (input == Input::Idle) {
+//         state = State::Center;
+//       } 
+//       return;
+
+//     case State::Running : 
+//       if (input == Input::Idle) {
+//         state = State::Center;
+//       } 
+//       return;
+//   }
+// }
 
 
 // ========== DISPLAY =========================================================
@@ -295,24 +286,23 @@ void updateDisplay(const char *row1 = nullptr, const char *row2 = nullptr) {
 }
 
 void display() {
-  switch (mode) {
-    case 0 : 
+  switch (getMode()) {
+    case Clock: 
       updateDisplay("Clock", "Unknown");
       break;
-    case 1:
-      updateDisplay("Timer", getTimer());
+    case Timer:
+      updateDisplay("Timer", "Timer");
+      // updateDisplay("Timer", getTimer());
+
       break;
-    case 2:
+    case Stopwatch:
       updateDisplay("Stopwatch", "Unknown");
       break;
-    // default: 
   }
 }
 
 
 // ========== PROGRAM =========================================================
-
-
 
 void setup() {
   Serial.begin( 9600 );
@@ -322,7 +312,6 @@ void setup() {
   lcd.noCursor();
   lcd.noAutoscroll();
   
-  state = State::Center;
   inputX = InputX::IdleX;
   inputY = InputY::IdleY;
 }
@@ -339,7 +328,7 @@ void loop() {
 
   readInput(adcX, adcY);
 
-  control(curMillis);
+  modeSwtch(curMillis);
 
   if (curMillis - timer_last >= 1000) {
     runTimer(runBuzzer);
