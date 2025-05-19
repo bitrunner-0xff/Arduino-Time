@@ -310,9 +310,7 @@ void display() {
 
 // ========== PROGRAM =========================================================
 
-static int32_t millies_last = 0;
-static int32_t display_last = 0;
-static int32_t timer_last = 0;
+
 
 void setup() {
   Serial.begin( 9600 );
@@ -328,7 +326,11 @@ void setup() {
 }
 
 void loop() {
-  int32_t curMillis = millis();
+  static int64_t millies_last = 0;
+  static int64_t display_last = 0;
+  static int64_t timer_last = 0;
+
+  int64_t curMillis = millis();
 
   int16_t adcX = analogRead( A0 );
   int16_t adcY = analogRead( A1 );
