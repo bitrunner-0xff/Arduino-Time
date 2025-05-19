@@ -168,8 +168,8 @@ Mode getMode() {
   return mode;
 }
 
-void modeSwtch(int32_t millis_val) {
-  static int32_t prev_millis = 0;
+void modeSwtch(int64_t millis_val) {
+  static int64_t prev_millis = 0;
 
   const int64_t trigger_delay = 2000;
 
@@ -177,7 +177,7 @@ void modeSwtch(int32_t millis_val) {
     if (inputY == InputY::Down) {
       switch (mode) {
         case Clock: 
-          mode = Timer
+          mode = Timer;
           break;
 
         case Timer: 
@@ -206,6 +206,8 @@ void modeSwtch(int32_t millis_val) {
       }
     }
   }
+
+  prev_millis = millis();
 }
 
 void updateStateMachine() {
