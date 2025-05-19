@@ -11,14 +11,14 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 enum InputX : int8_t {
   IdleX,
-  SwitchModeRight,
-  SwitchModeLeft, 
+  Right,
+  Left, 
 };
 
 enum InputY : int8_t {
   IdleY,
-  IncreaseTime,
-  DecreaseTime,
+  Up,
+  Down,
 };
 
 InputX inputX;
@@ -160,76 +160,76 @@ int8_t mode = 0; // 0 - Clock; 1 - Timer; 2 - Stopwatch;
 
 State state;
 
-// void control() {
-//   switch (mode) {
-//     case 0: 
-//     case 1: 
-//     case 2:
-//   }
+void control() {
+  switch (mode) {
+    case 0: 
+    case 1: 
+    case 2:
+  }
 
-// }
+}
 
-// void updateStateMachine() {
-//   switch (state) {
-//     case State::Center : 
-//       switch (input) {
-//         case Input::IncreaseTime: 
-//           state = State::Top; 
-//           increaseTime(); 
-//           break;
+void updateStateMachine() {
+  switch (state) {
+    case State::Center : 
+      switch (input) {
+        case Input::IncreaseTime: 
+          state = State::Top; 
+          increaseTime(); 
+          break;
 
-//         case Input::DecreaseTime: 
-//           state = State::Bottom; 
-//           decreaseTime(); 
-//           break;
+        case Input::DecreaseTime: 
+          state = State::Bottom; 
+          decreaseTime(); 
+          break;
 
-//         case Input::SwitchModeRight: 
-//           state = State::Right; 
-//           switchModeRight(); 
-//           break;
+        case Input::SwitchModeRight: 
+          state = State::Right; 
+          switchModeRight(); 
+          break;
 
-//         case Input::SwitchModeLeft: 
-//           state = State::Left; 
-//           switchModeLeft(); 
-//           break;
-//       } 
-//       return;
+        case Input::SwitchModeLeft: 
+          state = State::Left; 
+          switchModeLeft(); 
+          break;
+      } 
+      return;
 
-//     case State::Bottom : 
-//       if (input == Input::Idle) {
-//         state = State::Center;
-//       } 
-//       return;
+    case State::Bottom : 
+      if (input == Input::Idle) {
+        state = State::Center;
+      } 
+      return;
 
-//     case State::Top : 
-//       if (input == Input::Idle) {
-//         state = State::Center;
-//       } 
-//       return;
+    case State::Top : 
+      if (input == Input::Idle) {
+        state = State::Center;
+      } 
+      return;
 
-//     case State::Left : 
-//       if (input == Input::Idle) {
-//         state = State::Center;
-//       } else if (input == Input::RunTimer) {
-//         state = State::Running;
-//         isRunning = true;
-//         runTimer(time, runBuzzer);
-//       }
-//       return;
+    case State::Left : 
+      if (input == Input::Idle) {
+        state = State::Center;
+      } else if (input == Input::RunTimer) {
+        state = State::Running;
+        isRunning = true;
+        runTimer(time, runBuzzer);
+      }
+      return;
 
-//     case State::Right : 
-//       if (input == Input::Idle) {
-//         state = State::Center;
-//       } 
-//       return;
+    case State::Right : 
+      if (input == Input::Idle) {
+        state = State::Center;
+      } 
+      return;
 
-//     case State::Running : 
-//       if (input == Input::Idle) {
-//         state = State::Center;
-//       } 
-//       return;
-//   }
-// }
+    case State::Running : 
+      if (input == Input::Idle) {
+        state = State::Center;
+      } 
+      return;
+  }
+}
 
 
 // ========== DISPLAY =========================================================
