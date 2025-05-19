@@ -1,14 +1,6 @@
 // include the library code:
 #include <LiquidCrystal.h>
 
-typedef void (*termination_handler)();
-
-typedef struct {
-  int8_t h;
-  int8_t m;
-  int8_t s;
-} Timer;
-
 // ----- Pins -----
 
 const int16_t buzzer = 6;
@@ -63,10 +55,16 @@ void readInput(int16_t adcX, int16_t adcY) {
 
 // ========== MODES ===========================================================
 
+typedef struct {
+  int8_t h;
+  int8_t m;
+  int8_t s;
+} Time;
+
 // ---------- Timer -----------------------------------------------------------
 
-static Timer timer;
-static char timer_string[9] = "00:00:00\0";
+static Time timer = {0,0,0};
+static char timer_string[9];
 static int8_t timer_section = 0; // 0 - hours; 1 - minutes; 2 - seconds;
 static bool isRunningTimer = false;
 
@@ -75,13 +73,11 @@ void setTimer() {
 }
 
 void startTimer() {
-  static int8_t start_timer_last = 0;
+  isRunningTimer = true;
+}
 
-  if (inputX == InputX::SwitchModeRight && millis() - start_timer_last >= 3000) {
-    start_timer_last = millis();
-
-    isRunningTimer = true;
-  }
+const char* getTimer() {
+  return timer_string;
 }
 
 void switchModeRight() {
@@ -110,8 +106,9 @@ void decreaseTime() {
   }
 }
 
-void runTimer(termination_handler handler ) {
-  while (isRunningTimer) {
+// typedef void (*termination_handler)();
+void runTimer(void (*termination_handler)()) {
+  if (isRunningTimer) {
 
     if( timer.s > 0 ) {
       timer.s--;
@@ -125,9 +122,11 @@ void runTimer(termination_handler handler ) {
       timer.m = 59;
 
     } else {
-      handler();
+      termination_handler();
       isRunningTimer = false;
     }
+
+    setTimer();
   }
 }
 
@@ -161,9 +160,14 @@ int8_t mode = 0; // 0 - Clock; 1 - Timer; 2 - Stopwatch;
 
 State state;
 
-void control() {
+// void control() {
+//   switch (mode) {
+//     case 0: 
+//     case 1: 
+//     case 2:
+//   }
 
-}
+// }
 
 // void updateStateMachine() {
 //   switch (state) {
@@ -231,18 +235,6 @@ void control() {
 // ========== DISPLAY =========================================================
 
 
-void display() {
-  switch (mode) {
-    case 0 : 
-      showMenu(0);
-      break;
-
-    // case Mode::Timer : 
-    // case Mode::Clock : 
-    // case Mode::Stopwatch : 
-  }
-}
-
 void updateDisplay(const char *row1 = nullptr, const char *row2 = nullptr) {
   lcd.clear();
 
@@ -261,41 +253,43 @@ void updateDisplay(const char *row1 = nullptr, const char *row2 = nullptr) {
   }
 }
 
-void showMenu(int8_t menu_mode) {
-  switch (menu_mode) {
-    case 1 : updateDisplay("Menu", "Clock"); break;
-    case 2 : updateDisplay("Menu", "Timer"); break;
-    case 3 : updateDisplay("Menu", "Stopwatch"); break;
-    default: updateDisplay("Menu", "Up Down"); break;
+void display() {
+  switch (mode) {
+    case 0 : 
+      updateDisplay("Clock", "Unknown");
+      break;
+    case 1:
+      updateDisplay("Timer", getTimer());
+      break;
+    case 2:
+      updateDisplay("Stopwatch", "Unknown");
+      break;
+    // default: 
   }
 }
 
 
-
-
-
 // ========== PROGRAM =========================================================
 
-static int16_t millies_last = 0;
-static int64_t delay_last = 0;
+static int32_t millies_last = 0;
+static int32_t display_last = 0;
+static int32_t timer_last = 0;
 
 void setup() {
   Serial.begin( 9600 );
   pinMode( buzzer, OUTPUT );
 
   lcd.begin( 16, 2 );
-  // lcd.setCursor( 0, 0 );
   lcd.noCursor();
   lcd.noAutoscroll();
   
-  timer = { 0,0,0 };
   state = State::Center;
   inputX = InputX::IdleX;
   inputY = InputY::IdleY;
 }
 
 void loop() {
-  int64_t curMillis = millis();
+  int32_t curMillis = millis();
 
   int16_t adcX = analogRead( A0 );
   int16_t adcY = analogRead( A1 );
@@ -304,10 +298,15 @@ void loop() {
 
   // control();
 
-  if ((curMillis - delay_last) >= 100) {
+  if (curMillis - timer_last >= 1000) {
+    runTimer(runBuzzer);
+
+    timer_last = millis();
+  }
+
+  if ((curMillis - display_last) >= 100) {
     display();
 
-
-    delay_last = millis();
+    display_last = millis();
   }
 }
