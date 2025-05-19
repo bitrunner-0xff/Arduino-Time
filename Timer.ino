@@ -156,17 +156,56 @@ enum State : int8_t {
   Right,
 };
 
-int8_t mode = 0; // 0 - Clock; 1 - Timer; 2 - Stopwatch;
+enum Mode : int8_t {
+  Clock,
+  Timer,
+  Stopwatch,
+};
 
-State state;
+Mode mode;
 
-void control() {
-  switch (mode) {
-    case 0: 
-    case 1: 
-    case 2:
+Mode getMode() {
+  return mode;
+}
+
+void modeSwtch(int32_t millis_val) {
+  static int32_t prev_millis = 0;
+
+  const int64_t trigger_delay = 2000;
+
+  if (millis_val - prev_millis >= trigger_delay) {
+    if (inputY == InputY::Down) {
+      switch (mode) {
+        case Clock: 
+          mode = Timer
+          break;
+
+        case Timer: 
+          mode = Stopwatch;
+          break;
+
+        case Stopwatch:
+          mode = Clock;
+          break;
+      }
+    }
+
+    if (inputY == InputY::Up) {
+      switch (mode) {
+        case Clock: 
+          mode = Stopwatch;
+          break;
+
+        case Timer: 
+          mode = Clock;
+          break;
+
+        case Stopwatch:
+          mode = Timer;
+          break;
+      }
+    }
   }
-
 }
 
 void updateStateMachine() {
@@ -296,7 +335,7 @@ void loop() {
 
   readInput(adcX, adcY);
 
-  // control();
+  control(curMillis);
 
   if (curMillis - timer_last >= 1000) {
     runTimer(runBuzzer);
