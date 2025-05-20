@@ -87,7 +87,7 @@ void switchModeLeft() {
 
 void increaseTime() {
   switch (timer_section) {
-    case 0: timer.h = timer.h > 99 ? timer.h = 0 : timer.h += 1; break;
+    case 0: timer.h = timer.h >= 99 ? timer.h = 0 : timer.h += 1; break;
     case 1: timer.m = timer.m > 59 ? timer.m = 0 : timer.m += 1; break;
     case 2: timer.s = timer.s > 59 ? timer.s = 0 : timer.s += 1; break;
   }
@@ -136,7 +136,44 @@ void runBuzzer() {
 
 // ---------- Stopwatch -------------------------------------------------------
 
-// TODO;
+static Time stopwatch = {0,0,0};
+static char stopwatch_string[9] = "00:00:00\0";
+static bool isRunningStopwatch = false;
+
+const char* getStopwatch() {
+  return stopwatch_string;
+}
+
+void updateStopwatch() {
+  snprintf(stopwatch_string, sizeof(stopwatch_string), "%02d:%02d:%02d", stopwatch.h, stopwatch.m, stopwatch.s);
+}
+
+void startStowatch() {
+  isRunningStopwatch = true;
+}
+
+void runStopwatch() {
+  if (isRunningStopwatch) {
+
+    if( stopwatch.s < 59 ) {
+      stopwatch.s++;
+
+    } else if( stopwatch.m < 59 ) {
+      stopwatch.m++;
+      stopwatch.s = 0;
+
+    } else if( stopwatch.h < 99 ) {
+      stopwatch.h++;
+      stopwatch.m = 0;
+
+    } else {
+      isRunningStopwatch = false;
+    }
+
+    updateStopwatch();
+    Serial.println(getStopwatch());
+  }
+}
 
 
 
@@ -150,7 +187,6 @@ enum Mode : int8_t {
 
 Mode mode;
 bool isSettingMode = false;
-
 
 int8_t getMode() {
   return mode;
@@ -169,7 +205,7 @@ void modeSwtch(int32_t millis_val) {
       case Stopwatch: mode = Clock; break;
     }
 
-    prev_delay = millis();
+    prev_delay = millis_val;
   }
 
   if (inputY == Input::Up && isDelayExceed) {
@@ -179,7 +215,7 @@ void modeSwtch(int32_t millis_val) {
       case Stopwatch: mode = Timer; break;
     }
 
-    prev_delay = millis();
+    prev_delay = millis_val;
   }
 }
 
@@ -190,8 +226,8 @@ void timerControl(int32_t millis_val) {
   static bool is_wait_to_trigger_run = false;
   static bool is_wait_to_trigger_quit = false;
 
-  int32_t isDelayReady = millis_val - prev_delay >= 300;
-  int32_t isLongActionReady = millis_val - prev_long_delay >= 2000;
+  bool isDelayReady = millis_val - prev_delay >= 300;
+  bool isLongActionReady = millis_val - prev_long_delay >= 2000;
 
   switch (inputX) {
     case Right: 
@@ -303,7 +339,7 @@ void display() {
 
       break;
     case Stopwatch:
-      updateDisplay("Stopwatch", "Unknown");
+      updateDisplay("Stopwatch", getStopwatch());
       break;
   }
 }
@@ -318,12 +354,13 @@ void setup() {
   lcd.begin( 16, 2 );
   lcd.noCursor();
   lcd.noAutoscroll();
+  startStowatch();
 }
 
 void loop() {
   static int64_t millies_last = 0;
   static int64_t display_last = 0;
-  static int64_t timer_last = 0;
+  static int64_t time_last = 0;
 
   int64_t curMillis = millis();
 
@@ -336,10 +373,11 @@ void loop() {
   setModeSetting(curMillis);
   modeSettings(curMillis);
 
-  if (curMillis - timer_last >= 1000) {
+  if (curMillis - time_last >= 1000) {
     runTimer(runBuzzer);
+    runStopwatch();
 
-    timer_last = millis();
+    time_last = millis();
   }
 
   if ((curMillis - display_last) >= 100) {
