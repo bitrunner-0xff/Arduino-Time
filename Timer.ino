@@ -185,39 +185,56 @@ void modeSwtch(int32_t millis_val) {
 
 void timerControl(int32_t millis_val) {
   static int32_t prev_delay = 0;
-  bool isDelayReady = millis_val - prev_delay >= 300;
-  bool isRunDelay = millis_val - prev_delay >= 3000;
+  static int32_t prev_long_delay = 0;
+  static int32_t prev_return_delay = 0;
+  static bool is_wait_to_trigger_run = false;
+  static bool is_wait_to_trigger_quit = false;
+
+  int32_t isDelayReady = millis_val - prev_delay >= 300;
+  int32_t isLongActionReady = millis_val - prev_long_delay >= 2000;
 
   switch (inputX) {
     case Right: 
       if (isDelayReady) {
         switchModeRight();
-        Serial.println("Right");
+        prev_delay = millis_val;
       } 
-      if (isRunDelay) {
-        runTimer(runBuzzer);
-        Serial.println("Run");
+
+      if (!is_wait_to_trigger_run) {
+        prev_long_delay = millis_val;
+        is_wait_to_trigger_run = true;
+
+      } else if (isLongActionReady) {
+        is_wait_to_trigger_run = false;
+        isSettingMode = false;
+        startTimer();
       }
-      prev_delay = millis();
-      
       break;
       
     case Left: 
       if (isDelayReady) {
         switchModeLeft();
-
-        prev_delay = millis();
+        prev_delay = millis_val;
       }  
+
+      if (!is_wait_to_trigger_quit) {
+        prev_long_delay = millis_val;
+        is_wait_to_trigger_quit = true;
+
+      } else if (isLongActionReady) {
+        isSettingMode = false;
+        is_wait_to_trigger_quit = false;
+      }
       break;
   }
  
-  if (inputY != Input::Idle && isDelayReady) {
+  if (inputY != Idle && isDelayReady) {
     switch (inputY) {
       case Up: increaseTime(); setTimer(); break;
       case Down: decreaseTime(); setTimer(); break;
     }
 
-    prev_delay = millis();
+    prev_delay = millis_val;
   }
 }
 
@@ -240,11 +257,13 @@ void setModeSetting(int32_t millis_val) {
       if (!waiting_to_trigger) {
         prev_delay = millis_val;
         waiting_to_trigger = true;
+
       } else if (millis_val - prev_delay >= 2000) {
         isSettingMode = true;
         waiting_to_trigger = false;
-        prev_delay = millis();
+
         Serial.println("Setting mode enagled");
+
       }
     } else {
       waiting_to_trigger = false;
