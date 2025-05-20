@@ -9,20 +9,16 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 // ========== Input ===========================================================
 
-enum InputX : int8_t {
-  IdleX,
+enum Input : int8_t {
+  Idle,
   Right,
   Left, 
-};
-
-enum InputY : int8_t {
-  IdleY,
   Up,
   Down,
 };
 
-InputX inputX;
-InputY inputY;
+Input inputX = Input::Idle;;
+Input inputY = Input::Idle;;
 
 void readInput(int16_t adcX, int16_t adcY) {
   const int16_t threshold = 100;
@@ -31,23 +27,23 @@ void readInput(int16_t adcX, int16_t adcY) {
   static int16_t adcY_last = adcY;
 
   if (adcX > adcX_last + threshold) {
-    inputX = InputX::Right;
+    inputX = Input::Right;
 
   } else if (adcX < adcX_last - threshold) {
-    inputX = InputX::Left;
+    inputX = Input::Left;
 
   } else {
-    inputX = InputX::IdleX;
+    inputX = Input::Idle;
   }
 
   if (adcY > adcY_last + threshold) {
-    inputY = InputY::Up;
+    inputY = Input::Up;
   
   } else if (adcY < adcY_last - threshold) {
-    inputY = InputY::Down;
+    inputY = Input::Down;
 
   } else {
-    inputY = InputY::IdleY;
+    inputY = Input::Idle;
   }
 }
 
@@ -63,7 +59,7 @@ typedef struct {
 // ---------- Timer -----------------------------------------------------------
 
 static Time timer = {0,0,0};
-static char timer_string[9];
+static char timer_string[9] = "00:00:00\0";
 static int8_t timer_section = 0; // 0 - hours; 1 - minutes; 2 - seconds;
 static bool isRunningTimer = false;
 
@@ -105,7 +101,6 @@ void decreaseTime() {
   }
 }
 
-// typedef void (*termination_handler)();
 void runTimer(void (*termination_handler)()) {
   if (isRunningTimer) {
 
@@ -154,114 +149,108 @@ enum Mode : int8_t {
 };
 
 Mode mode;
+bool isSettingMode = false;
 
-static int32_t prew_millis = 0;
 
 int8_t getMode() {
   return mode;
 }
 
 void modeSwtch(int32_t millis_val) {
-  bool isDelayExceed = millis_val - prew_millis >= 2000;
+  if (isSettingMode) return;
 
-  if (inputY == InputY::Down && isDelayExceed) {
+  static int32_t prev_delay = 0;
+  bool isDelayExceed = millis_val - prev_delay >= 2000;
+
+  if (inputY == Input::Down && isDelayExceed) {
     switch (mode) {
-      case Clock: 
-        mode = Timer;
-        break;
-
-      case Timer: 
-        mode = Stopwatch;
-        break;
-
-      case Stopwatch:
-        mode = Clock;
-        break;
+      case Clock: mode = Timer; break;
+      case Timer: mode = Stopwatch; break;
+      case Stopwatch: mode = Clock; break;
     }
 
-    prew_millis = millis();
+    prev_delay = millis();
   }
 
-  if (inputY == InputY::Up && isDelayExceed) {
+  if (inputY == Input::Up && isDelayExceed) {
     switch (mode) {
-      case Clock: 
-        mode = Stopwatch;
-        break;
-
-      case Timer: 
-        mode = Clock;
-        break;
-
-      case Stopwatch:
-        mode = Timer;
-        break;
+      case Clock: mode = Stopwatch; break;
+      case Timer: mode = Clock; break;
+      case Stopwatch: mode = Timer; break;
     }
 
-    prew_millis = millis();
+    prev_delay = millis();
   }
 }
 
-// void updateStateMachine() {
-//   switch (state) {
-//     case State::Center : 
-//       switch (input) {
-//         case Input::IncreaseTime: 
-//           state = State::Top; 
-//           increaseTime(); 
-//           break;
+void timerControl(int32_t millis_val) {
+  static int32_t prev_delay = 0;
+  bool isDelayReady = millis_val - prev_delay >= 300;
+  bool isRunDelay = millis_val - prev_delay >= 3000;
 
-//         case Input::DecreaseTime: 
-//           state = State::Bottom; 
-//           decreaseTime(); 
-//           break;
+  switch (inputX) {
+    case Right: 
+      if (isDelayReady) {
+        switchModeRight();
+        Serial.println("Right");
+      } 
+      if (isRunDelay) {
+        runTimer(runBuzzer);
+        Serial.println("Run");
+      }
+      prev_delay = millis();
+      
+      break;
+      
+    case Left: 
+      if (isDelayReady) {
+        switchModeLeft();
 
-//         case Input::SwitchModeRight: 
-//           state = State::Right; 
-//           switchModeRight(); 
-//           break;
+        prev_delay = millis();
+      }  
+      break;
+  }
+ 
+  if (inputY != Input::Idle && isDelayReady) {
+    switch (inputY) {
+      case Up: increaseTime(); setTimer(); break;
+      case Down: decreaseTime(); setTimer(); break;
+    }
 
-//         case Input::SwitchModeLeft: 
-//           state = State::Left; 
-//           switchModeLeft(); 
-//           break;
-//       } 
-//       return;
+    prev_delay = millis();
+  }
+}
 
-//     case State::Bottom : 
-//       if (input == Input::Idle) {
-//         state = State::Center;
-//       } 
-//       return;
+void modeSettings(int32_t millis_val) {
+  if (isSettingMode) {
+    switch (mode) {
+      case Clock: break;
+      case Timer: timerControl(millis_val); break;
+      case Stopwatch: break;
+    }
+  }
+}
 
-//     case State::Top : 
-//       if (input == Input::Idle) {
-//         state = State::Center;
-//       } 
-//       return;
-
-//     case State::Left : 
-//       if (input == Input::Idle) {
-//         state = State::Center;
-//       } else if (input == Input::RunTimer) {
-//         state = State::Running;
-//         isRunning = true;
-//         runTimer(time, runBuzzer);
-//       }
-//       return;
-
-//     case State::Right : 
-//       if (input == Input::Idle) {
-//         state = State::Center;
-//       } 
-//       return;
-
-//     case State::Running : 
-//       if (input == Input::Idle) {
-//         state = State::Center;
-//       } 
-//       return;
-//   }
-// }
+void setModeSetting(int32_t millis_val) {
+  static int32_t prev_delay = 0;
+  static bool waiting_to_trigger = false;
+  
+  if (!isSettingMode) {
+    if (inputX == Input::Right) {
+      if (!waiting_to_trigger) {
+        prev_delay = millis_val;
+        waiting_to_trigger = true;
+      } else if (millis_val - prev_delay >= 2000) {
+        isSettingMode = true;
+        waiting_to_trigger = false;
+        prev_delay = millis();
+        Serial.println("Setting mode enagled");
+      }
+    } else {
+      waiting_to_trigger = false;
+    }
+  }
+}
 
 
 // ========== DISPLAY =========================================================
@@ -291,8 +280,7 @@ void display() {
       updateDisplay("Clock", "Unknown");
       break;
     case Timer:
-      updateDisplay("Timer", "Timer");
-      // updateDisplay("Timer", getTimer());
+      updateDisplay("Timer", getTimer());
 
       break;
     case Stopwatch:
@@ -311,9 +299,6 @@ void setup() {
   lcd.begin( 16, 2 );
   lcd.noCursor();
   lcd.noAutoscroll();
-  
-  inputX = InputX::IdleX;
-  inputY = InputY::IdleY;
 }
 
 void loop() {
@@ -329,6 +314,8 @@ void loop() {
   readInput(adcX, adcY);
 
   modeSwtch(curMillis);
+  setModeSetting(curMillis);
+  modeSettings(curMillis);
 
   if (curMillis - timer_last >= 1000) {
     runTimer(runBuzzer);
