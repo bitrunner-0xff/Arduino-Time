@@ -171,7 +171,6 @@ void runStopwatch() {
     }
 
     updateStopwatch();
-    Serial.println(getStopwatch());
   }
 }
 
@@ -196,7 +195,7 @@ void modeSwtch(int32_t millis_val) {
   if (isSettingMode) return;
 
   static int32_t prev_delay = 0;
-  bool isDelayExceed = millis_val - prev_delay >= 2000;
+  bool isDelayExceed = millis_val - prev_delay >= 300;
 
   if (inputY == Input::Down && isDelayExceed) {
     switch (mode) {
@@ -223,6 +222,7 @@ void timerControl(int32_t millis_val) {
   static int32_t prev_delay = 0;
   static int32_t prev_long_delay = 0;
   static int32_t prev_return_delay = 0;
+
   static bool is_wait_to_trigger_run = false;
   static bool is_wait_to_trigger_quit = false;
 
@@ -274,12 +274,43 @@ void timerControl(int32_t millis_val) {
   }
 }
 
+void stopwatchControl(int32_t millis_val) {
+  static int32_t prev_delay = 0;
+
+  bool isDelayReady = millis_val - prev_delay >= 300;
+
+  
+
+  switch (inputX) {
+    case Right: 
+      if (isDelayReady) {
+        if (!isRunningStopwatch) {
+          startStowatch();
+          isSettingMode = false; 
+          Serial.println("stopwatch start");
+          return;
+        }
+      }
+      if (isRunningStopwatch) {
+          Serial.println("stopwatch stop");
+          isRunningStopwatch = false;
+          isSettingMode = false; 
+        }
+      
+      break;
+
+    case Left: 
+      isSettingMode = false; 
+      break;
+  }
+}
+
 void modeSettings(int32_t millis_val) {
   if (isSettingMode) {
     switch (mode) {
       case Clock: break;
       case Timer: timerControl(millis_val); break;
-      case Stopwatch: break;
+      case Stopwatch: stopwatchControl(millis_val); break;
     }
   }
 }
@@ -354,7 +385,6 @@ void setup() {
   lcd.begin( 16, 2 );
   lcd.noCursor();
   lcd.noAutoscroll();
-  startStowatch();
 }
 
 void loop() {
