@@ -88,16 +88,16 @@ void switchModeLeft() {
 void increaseTime() {
   switch (timer_section) {
     case 0: timer.h = timer.h >= 99 ? timer.h = 0 : timer.h += 1; break;
-    case 1: timer.m = timer.m > 59 ? timer.m = 0 : timer.m += 1; break;
-    case 2: timer.s = timer.s > 59 ? timer.s = 0 : timer.s += 1; break;
+    case 1: timer.m = timer.m >= 60 ? timer.m = 0 : timer.m += 1; break;
+    case 2: timer.s = timer.s >= 60 ? timer.s = 0 : timer.s += 1; break;
   }
 }
 
 void decreaseTime() {
   switch (timer_section) {
     case 0: timer.h = timer.h < 0 ? timer.h = 99 : timer.h -= 1; break;
-    case 1: timer.m = timer.m < 0 ? timer.m = 59 : timer.m -= 1; break;
-    case 2: timer.s = timer.s < 0 ? timer.s = 59 : timer.s -= 1; break;
+    case 1: timer.m = timer.m <= 0 ? timer.m = 60 : timer.m -= 1; break;
+    case 2: timer.s = timer.s <= 0 ? timer.s = 60 : timer.s -= 1; break;
   }
 }
 
@@ -227,7 +227,7 @@ void timerControl(int32_t millis_val) {
   static bool is_wait_to_trigger_quit = false;
 
   bool isDelayReady = millis_val - prev_delay >= 300;
-  bool isLongActionReady = millis_val - prev_long_delay >= 2000;
+  bool isLongActionReady = millis_val - prev_long_delay >= 3000;
 
   switch (inputX) {
     case Right: 
@@ -244,7 +244,8 @@ void timerControl(int32_t millis_val) {
         is_wait_to_trigger_run = false;
         isSettingMode = false;
         startTimer();
-      }
+
+      } 
       break;
       
     case Left: 
@@ -259,6 +260,9 @@ void timerControl(int32_t millis_val) {
 
       } else if (isLongActionReady) {
         isSettingMode = false;
+        is_wait_to_trigger_quit = false;
+
+      } else {
         is_wait_to_trigger_quit = false;
       }
       break;
@@ -279,24 +283,19 @@ void stopwatchControl(int32_t millis_val) {
 
   bool isDelayReady = millis_val - prev_delay >= 300;
 
-  
-
   switch (inputX) {
     case Right: 
       if (isDelayReady) {
         if (!isRunningStopwatch) {
           startStowatch();
           isSettingMode = false; 
-          Serial.println("stopwatch start");
           return;
         }
       }
       if (isRunningStopwatch) {
-          Serial.println("stopwatch stop");
-          isRunningStopwatch = false;
-          isSettingMode = false; 
-        }
-      
+        isRunningStopwatch = false;
+        isSettingMode = false; 
+      }
       break;
 
     case Left: 
@@ -304,6 +303,8 @@ void stopwatchControl(int32_t millis_val) {
       break;
   }
 }
+
+
 
 void modeSettings(int32_t millis_val) {
   if (isSettingMode) {
@@ -315,7 +316,7 @@ void modeSettings(int32_t millis_val) {
   }
 }
 
-void setModeSetting(int32_t millis_val) {
+void enambleModeSetting(int32_t millis_val) {
   static int32_t prev_delay = 0;
   static bool waiting_to_trigger = false;
   
@@ -328,8 +329,6 @@ void setModeSetting(int32_t millis_val) {
       } else if (millis_val - prev_delay >= 2000) {
         isSettingMode = true;
         waiting_to_trigger = false;
-
-        Serial.println("Setting mode enagled");
 
       }
     } else {
@@ -400,7 +399,7 @@ void loop() {
   readInput(adcX, adcY);
 
   modeSwtch(curMillis);
-  setModeSetting(curMillis);
+  enambleModeSetting(curMillis);
   modeSettings(curMillis);
 
   if (curMillis - time_last >= 1000) {
